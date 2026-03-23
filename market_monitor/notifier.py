@@ -55,18 +55,16 @@ def _save_throttle(state: dict[str, str]) -> None:
         json.dump(state, fh, indent=2)
 
 
-def _already_sent_today(signal_name: str, symbol: str) -> bool:
-    """Return True if an email was already sent today for this signal+symbol."""
-    key   = f"{signal_name}|{symbol}"
+def _already_sent_today(symbol: str) -> bool:
+    """Return True if an email was already sent today for this symbol."""
     today = date.today().isoformat()
-    return _load_throttle().get(key) == today
+    return _load_throttle().get(symbol) == today
 
 
-def _record_sent_today(signal_name: str, symbol: str) -> None:
-    key   = f"{signal_name}|{symbol}"
+def _record_sent_today(symbol: str) -> None:
     today = date.today().isoformat()
     state = _load_throttle()
-    state[key] = today
+    state[symbol] = today
     _save_throttle(state)
 
 
@@ -134,10 +132,10 @@ class Notifier:
     # ── Email ─────────────────────────────────────────────────────────────────
 
     def _email(self, alert: Alert) -> None:
-        if _already_sent_today(alert.signal_name, alert.symbol):
+        if _already_sent_today(alert.symbol):
             log.info(
-                "Email throttled: already sent today for signal=%s symbol=%s",
-                alert.signal_name, alert.symbol,
+                "Email throttled: already sent today for symbol=%s",
+                alert.symbol,
             )
             return
         send_email(
@@ -145,7 +143,7 @@ class Notifier:
             html_body = _build_html(alert),
             config    = self._full_config,
         )
-        _record_sent_today(alert.signal_name, alert.symbol)
+        _record_sent_today(alert.symbol)
 
     # ── Slack stub ────────────────────────────────────────────────────────────
 
